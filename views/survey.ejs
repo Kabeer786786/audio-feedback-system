@@ -1,7 +1,3 @@
-<!-- ============================================
-     SURVEY PAGE (views/survey.ejs)
-     ============================================ -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Audio Feedback Survey</title>
   <style>
+    /* ALL CSS is the same as you provided - it is excellent and responsive */
     * {
       margin: 0;
       padding: 0;
@@ -228,28 +225,7 @@
       border-radius: 4px;
     }
 
-    .transcription-box {
-      background: #f0f4ff;
-      border-left: 4px solid #6d28d9;
-      padding: 14px;
-      border-radius: 6px;
-      margin-top: 12px;
-    }
-
-    .transcription-box p {
-      font-size: 13px;
-      color: #4b5563;
-      line-height: 1.6;
-    }
-
-    .transcription-box .label {
-      font-size: 11px;
-      color: #6b7280;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      display: block;
-    }
+    /* Transcription box CSS is removed as the element is gone */
 
     .timer {
       font-size: 16px;
@@ -340,6 +316,7 @@
       box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
     }
 
+    /* ⭐️ UPDATED Submit Section */
     .submit-section {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
       padding: 25px;
@@ -355,30 +332,11 @@
     }
 
     .submit-section h3 {
-      margin-bottom: 15px;
+      margin-bottom: 20px; /* Increased margin */
       font-size: 18px;
     }
-
-    .respondent-input {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      margin-bottom: 12px;
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      font-family: inherit;
-    }
-
-    .respondent-input::placeholder {
-      color: rgba(255, 255, 255, 0.7);
-    }
-
-    .respondent-input:focus {
-      outline: none;
-      background: rgba(255, 255, 255, 0.3);
-    }
+    
+    /* Input fields are removed */
 
     .submit-btn {
       width: 100%;
@@ -440,9 +398,7 @@
       </div>
 
       <div class="submit-section" id="submitSection">
-        <h3>Confirm Your Information</h3>
-        <input type="text" class="respondent-input" id="respondentName" placeholder="Your Full Name" required>
-        <input type="email" class="respondent-input" id="respondentEmail" placeholder="Your Email Address" required>
+        <h3>Ready to submit your feedback?</h3>
         <button class="submit-btn" id="submitBtn" onclick="submitResponse()">Submit Survey</button>
       </div>
     </div>
@@ -456,8 +412,24 @@
     let recordingStartTime = 0;
     let timerInterval = null;
 
+    // ⭐️ NEW: Variables for email auto-fill and TTS
+    let respondentEmail = '';
+    let currentAudio = null;
+    let audioCache = {};
+
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
+      // ⭐️ NEW: Get email from URL
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        respondentEmail = urlParams.get('email') || '';
+        if (respondentEmail) {
+          console.log('Email pre-filled:', respondentEmail);
+        }
+      } catch (e) {
+        console.error('Could not parse URL params', e);
+      }
+
       const qData = <%- questionnaire %>;
       questionnaire = qData;
 
@@ -465,7 +437,7 @@
       document.getElementById('surveyDesc').textContent = questionnaire.description;
 
       renderQuestions();
-      showQuestion(0);
+      showQuestion(0); // This will now also trigger the first TTS audio
       updateProgress();
     });
 
@@ -475,6 +447,7 @@
         const section = document.createElement('div');
         section.className = 'question-section';
         section.id = `question-${i}`;
+        // ⭐️ UPDATED: Removed the .transcription-box div
         section.innerHTML = `
           <div class="question-counter">Question ${i + 1} of ${questionnaire.questions.length}</div>
           <div class="question-text">${q.text}</div>
@@ -497,16 +470,55 @@
             <div class="playback-section" id="playback-${i}">
               <span class="playback-label">Your Recording</span>
               <audio id="audio-${i}" controls></audio>
-              <div class="transcription-box">
-                <span class="label">Transcription</span>
-                <p id="text-${i}">Transcription will appear after submission...</p>
               </div>
-            </div>
           </div>
         `;
         container.appendChild(section);
       });
     }
+
+    // ⭐️ NEW: Function to play TTS audio for the current question
+    async function playQuestionAudio(index) {
+      // Stop any audio that is currently playing
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+
+      const question = questionnaire.questions[index];
+      if (!question) return;
+
+      try {
+        // Check if we have this audio cached
+        if (audioCache[index]) {
+          currentAudio = audioCache[index];
+          currentAudio.currentTime = 0; // Rewind
+          currentAudio.play();
+        } else {
+          // Fetch new audio from our TTS API
+          const response = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: question.text })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch audio');
+          }
+
+          const blob = await response.blob();
+          const audioUrl = URL.createObjectURL(blob);
+          currentAudio = new Audio(audioUrl);
+          
+          // Store in cache
+          audioCache[index] = currentAudio;
+          currentAudio.play();
+        }
+      } catch (error) {
+        console.error('Error playing TTS audio:', error);
+      }
+    }
+
 
     function showQuestion(index) {
       document.querySelectorAll('.question-section').forEach(el => el.classList.remove('active'));
@@ -515,10 +527,16 @@
       currentQuestion = index;
       updateProgress();
 
+      // ⭐️ NEW: Play audio for the question
+      playQuestionAudio(index);
+
       document.getElementById('prevBtn').disabled = index === 0;
       document.getElementById('nextBtn').style.display = index < questionnaire.questions.length - 1 ? 'block' : 'none';
-      document.getElementById('submitSection').classList.toggle('show', index === questionnaire.questions.length - 1);
-      document.getElementById('navigationButtons').style.display = index === questionnaire.questions.length - 1 ? 'none' : 'flex';
+      
+      // ⭐️ UPDATED: Logic for showing submit section
+      const onLastQuestion = index === questionnaire.questions.length - 1;
+      document.getElementById('submitSection').classList.toggle('show', onLastQuestion);
+      document.getElementById('navigationButtons').style.display = onLastQuestion ? 'none' : 'flex';
     }
 
     function updateProgress() {
@@ -527,6 +545,11 @@
     }
 
     async function startRecording(questionIndex) {
+      // ⭐️ NEW: Stop TTS audio if it's playing
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
@@ -620,17 +643,13 @@
       }
     }
 
+    // ⭐️ UPDATED: Submit function
     async function submitResponse() {
-      const name = document.getElementById('respondentName').value.trim();
-      const email = document.getElementById('respondentEmail').value.trim();
-
-      if (!name) {
-        alert('Please enter your name');
-        return;
-      }
-
-      if (!email || !email.includes('@')) {
-        alert('Please enter a valid email');
+      // ⭐️ REMOVED: Name and email validation
+      
+      // Use the pre-filled email
+      if (!respondentEmail) {
+        alert('Error: No respondent email found. Please use the link from your email.');
         return;
       }
 
@@ -647,16 +666,21 @@
         const response = await fetch('/api/submit-response', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          // ⭐️ UPDATED: Send the pre-filled email for both fields
           body: JSON.stringify({
             questionnaireId: questionnaire._id,
-            respondentName: name,
-            respondentEmail: email,
+            respondentName: respondentEmail, // Use email as name
+            respondentEmail: respondentEmail,
             responses: Object.values(responses)
           })
         });
 
         const result = await response.json();
         if (result.success) {
+          // ⭐️ NEW: Stop any playing audio before showing success
+          if (currentAudio) {
+            currentAudio.pause();
+          }
           document.querySelector('.survey-container').innerHTML = `
             <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 60px 40px; color: white; text-align: center; border-radius: 16px;">
               <div style="font-size: 48px; margin-bottom: 20px;">✓</div>

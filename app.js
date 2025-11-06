@@ -72,7 +72,7 @@ const questionnaireSchema = new mongoose.Schema({
   //
   questions: [{
     order: Number,
-    text: String
+    text: String,
   }],
   createdBy: String,
   createdAt: { type: Date, default: Date.now },
@@ -99,7 +99,7 @@ const Questionnaire = mongoose.model('Questionnaire', questionnaireSchema);
 const Response = mongoose.model('Response', responseSchema);
 
 // ============================================
-// 3. ROUTES
+// 3. ROUTES (Updated)
 // ============================================
 
 // LANDING PAGE
@@ -109,38 +109,37 @@ app.get('/', (req, res) => {
 
 // ADMIN PAGE
 app.get('/admin', (req, res) => {
-  res.render('admin');
+  // 1. Get the 'adminUsername' from the URL query string
+  const { adminUsername } = req.query;
+
+  // 2. Check if it matches your required username
+  if (adminUsername === 'adminjohan') {
+    // 3. If it matches, render the admin page
+    res.render('admin');
+  } else {
+    // 4. If it does not match (or is not provided), redirect to the homepage
+    res.redirect('/');
+  }
 });
 
 // API: Create Questionnaire
 app.post('/api/create-questionnaire', async (req, res) => {
   try {
     const { title, description, questions } = req.body;
-
-    console.log(req.body);
     
-    // Validate input
-    // 'questions' from the client is an array of strings: ["q1", "q2", "q3"]
     if (!title || !Array.isArray(questions) || questions.length === 0) {
       return res.status(400).json({ success: false, error: 'Invalid input data' });
     }
 
     const link = `survey-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    //
-    // THIS IS THE CORRECTED LOGIC:
-    // It maps the array of strings ["q1", "q2"]
-    // into an array of objects [ {order: 1, text: "q1"}, {order: 2, text: "q2"} ]
-    // This now matches your schema.
-    //
     const formattedQuestions = questions
       .filter(q => typeof q === 'string' && q.trim())
       .map((q, i) => ({
         order: i + 1,
-        text: q.trim()
+        text: q.trim(),
+        type: 'audio'
       }));
-
-      console.log('Formatted Questions:', formattedQuestions);
 
     if (formattedQuestions.length === 0) {
       return res.status(400).json({ success: false, error: 'At least one valid question required' });
@@ -149,11 +148,11 @@ app.post('/api/create-questionnaire', async (req, res) => {
     const questionnaire = new Questionnaire({
       title: title.trim(),
       description: description ? description.trim() : '',
-      questions: formattedQuestions, // <-- Pass the array of objects
+      questions: formattedQuestions,
       createdBy: 'admin',
       link: link
     });
-     
+    
     await questionnaire.save();
     const surveyUrl = `${process.env.APP_URL || 'http://localhost:3000'}/survey/${link}`;
     res.json({ success: true, link: surveyUrl, id: questionnaire._id });
@@ -201,14 +200,44 @@ app.get('/survey/:link', async (req, res) => {
   }
 });
 
+// ============================================
+// ⭐️ NEW ⭐️ API: Text-to-Speech
+// ============================================
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'No text provided' });
+    }
+
+    // Generate audio speech
+    const mp3 = await openai.audio.speech.create({
+      model: 'tts-1',
+      voice: 'alloy',
+      input: text
+    });
+
+    // Convert the audio to a buffer
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+
+    // Send the audio buffer as response
+    res.set('Content-Type', 'audio/mpeg');
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Error generating TTS audio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API: Submit Response with Audio
 app.post('/api/submit-response', async (req, res) => {
   try {
+    // Note: respondentName is now just the email
     const { questionnaireId, respondentName, respondentEmail, responses } = req.body;
     const processedResponses = [];
 
     for (const response of responses) {
-      // Convert base64 to buffer
       const audioBuffer = Buffer.from(response.audio, 'base64');
       const audioPath = path.join(__dirname, 'temp', `audio-${Date.now()}-${Math.random()}.wav`);
       
@@ -257,7 +286,7 @@ app.post('/api/submit-response', async (req, res) => {
 
     const feedbackResponse = new Response({
       questionnaireId,
-      respondentName,
+      respondentName: respondentName || respondentEmail, // Use email as name
       respondentEmail,
       responses: processedResponses
     });
@@ -281,11 +310,16 @@ app.get('/api/results/:questionnaireId', async (req, res) => {
   }
 });
 
-// API: Send Survey Link via Email
+// ============================================
+// ⭐️ UPDATED ⭐️ API: Send Survey Link via Email
+// ============================================
 app.post('/api/send-survey-link', async (req, res) => {
   try {
     const { surveyLink, recipientEmail } = req.body;
     
+    // Create the unique survey link with the email as a query parameter
+    const surveyLinkWithEmail = `${surveyLink}?email=${encodeURIComponent(recipientEmail)}`;
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: recipientEmail,
@@ -300,11 +334,11 @@ app.post('/api/send-survey-link', async (req, res) => {
             <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
               Please take a few minutes to complete our audio feedback survey. Your voice and opinions are valuable to us.
             </p>
-            <a href="${surveyLink}" style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
+            <a href="${surveyLinkWithEmail}" style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
               Start Survey
             </a>
             <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">
-              Or copy this link: <br><code style="background: #f3f4f6; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 10px; word-break: break-all;">${surveyLink}</code>
+              Or copy this link: <br><code style="background: #f3f4f6; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 10px; word-break: break-all;">${surveyLinkWithEmail}</code>
             </p>
           </div>
         </div>

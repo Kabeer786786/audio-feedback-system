@@ -1,0 +1,721 @@
+<!-- ============================================
+     ADMIN PANEL (views/admin.ejs)
+     ============================================ -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Audio Feedback</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9fafb;
+      color: #1f2937;
+    }
+
+    .navbar {
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      color: white;
+      padding: 20px 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar h1 {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease;
+      text-decoration: none;
+    }
+
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #6b7280;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn.active {
+      color: #6d28d9;
+      border-bottom-color: #6d28d9;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .form-section {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #6d28d9;
+      box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.1);
+    }
+
+    .questions-container {
+      background: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .question-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .question-item input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .remove-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    .remove-btn:hover {
+      background: #dc2626;
+    }
+
+    .add-question-btn {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 15px 0;
+      transition: background 0.3s ease;
+    }
+
+    .add-question-btn:hover {
+      background: #2563eb;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
+    }
+
+    .questionnaires-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .survey-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      border-left: 4px solid #6d28d9;
+      transition: all 0.3s ease;
+    }
+
+    .survey-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #1f2937;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .action-btn.view {
+      color: #6d28d9;
+      border-color: #6d28d9;
+    }
+
+    .action-btn.view:hover {
+      background: #f3e8ff;
+    }
+
+    .action-btn.share {
+      color: #3b82f6;
+      border-color: #3b82f6;
+    }
+
+    .action-btn.share:hover {
+      background: #eff6ff;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 30px;
+      color: #9ca3af;
+      background: white;
+      border-radius: 12px;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 600px;
+      width: 90%;
+    }
+
+    .close-modal {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+
+    .close-modal:hover {
+      color: #1f2937;
+    }
+
+    .link-display {
+      background: #f0f4ff;
+      padding: 15px;
+      border-radius: 8px;
+      border: 2px solid #c7d2fe;
+      margin: 15px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .link-text {
+      word-break: break-all;
+      font-size: 13px;
+      color: #4b5563;
+      font-family: monospace;
+    }
+
+    .copy-btn {
+      background: #6d28d9;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .copy-btn:hover {
+      background: #5b21b6;
+    }
+
+    .success-msg {
+      background: #d1fae5;
+      color: #047857;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .error-msg {
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      .questionnaires-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h1>🎤 Admin Panel</h1>
+    <a href="/" class="back-btn">← Back Home</a>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('create')">Create Survey</button>
+      <button class="tab-btn" onclick="switchTab('list')">My Surveys</button>
+      <button class="tab-btn" onclick="switchTab('results')">Results</button>
+    </div>
+
+    <!-- CREATE SURVEY TAB -->
+    <div id="create" class="tab-content active">
+      <div class="form-section">
+        <div class="success-msg" id="successMsg">✓ Survey created successfully!</div>
+        <div class="error-msg" id="errorMsg"></div>
+
+        <h2 style="margin-bottom: 25px;">Create New Survey</h2>
+        
+        <div class="form-group">
+          <label>Survey Title</label>
+          <input type="text" id="surveyTitle" placeholder="e.g., Customer Feedback Survey 2024">
+        </div>
+
+        <div class="form-group">
+          <label>Survey Description</label>
+          <textarea id="surveyDesc" placeholder="Brief description for respondents" rows="3"></textarea>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #374151;">Questions (at least 3)</label>
+          <div class="questions-container" id="questionsContainer"></div>
+          <button class="add-question-btn" onclick="addQuestion()">+ Add Question</button>
+        </div>
+
+        <button class="submit-btn" onclick="createSurvey()">Create Survey</button>
+      </div>
+    </div>
+
+    <!-- MY SURVEYS TAB -->
+    <div id="list" class="tab-content">
+      <div id="surveysContainer"></div>
+    </div>
+
+    <!-- RESULTS TAB -->
+    <div id="results" class="tab-content">
+      <div id="resultsContainer"></div>
+    </div>
+  </div>
+
+  <!-- SHARE LINK MODAL -->
+  <div id="linkModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeLinkModal()">&times;</span>
+      <h3 style="margin-bottom: 20px;">Share Survey</h3>
+      
+      <div class="link-display">
+        <span class="link-text" id="linkText"></span>
+        <button class="copy-btn" onclick="copyLink()">Copy</button>
+      </div>
+
+      <div class="form-group">
+        <label>Send via Email</label>
+        <input type="email" id="recipientEmail" placeholder="recipient@example.com">
+      </div>
+      <button class="submit-btn" onclick="sendViaEmail()" style="margin-top: 15px;">Send Email</button>
+    </div>
+  </div>
+
+  <script>
+    let surveys = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      addQuestion();
+      addQuestion();
+      addQuestion();
+      loadSurveys();
+    });
+
+   function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      
+      // --- FIXED ---
+      // Find the button with the matching data-tab attribute and make it active
+      const matchingButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+      if (matchingButton) {
+        matchingButton.classList.add('active');
+      }
+      // --- END FIX ---
+
+      if (tabName === 'list') loadSurveys();
+    }
+
+    function addQuestion() {
+      const container = document.getElementById('questionsContainer');
+      const count = container.children.length + 1;
+      const div = document.createElement('div');
+      div.className = 'question-item';
+      div.id = `q-${count}`;
+      div.innerHTML = `
+        <input type="text" placeholder="Question ${count}" class="question-input">
+        <button class="remove-btn" onclick="removeQuestion('q-${count}')">×</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function removeQuestion(id) {
+      const container = document.getElementById('questionsContainer');
+      if (container.children.length > 1) {
+        document.getElementById(id).remove();
+      } else {
+        alert('At least 1 question is required');
+      }
+    }
+
+    async function createSurvey() {
+      const title = document.getElementById('surveyTitle').value.trim();
+      const description = document.getElementById('surveyDesc').value.trim();
+      
+      // Get questions as array of strings - ONLY strings
+      const questionElements = Array.from(document.querySelectorAll('.question-input'));
+      const questions = questionElements
+        .map(q => q.value.trim())
+        .filter(q => q.length > 0); // Exclude empty questions
+
+      if (!title) {
+        showError('Please enter a survey title');
+        return;
+      }
+
+      if (questions.length < 3) {
+        showError('At least 3 questions are required');
+        return;
+      }
+
+      try {
+        // Create clean payload with only strings in questions array
+        console.log('Preparing to create survey with questions:', questions);
+        const payload = {
+          title: title,
+          description: description,
+          questions: questions  // Array of strings only
+        };
+
+        console.log('Sending payload:', JSON.stringify(payload));
+
+        const response = await fetch('/api/create-questionnaire', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showSuccess('✅ Survey created successfully!');
+          setTimeout(() => {
+            document.getElementById('surveyTitle').value = '';
+            document.getElementById('surveyDesc').value = '';
+            document.getElementById('questionsContainer').innerHTML = '';
+            addQuestion();
+            addQuestion();
+            addQuestion();
+            loadSurveys();
+            switchTab('list');
+          }, 1500);
+        } else {
+          showError('Error: ' + result.error);
+        }
+      } catch (error) {
+        showError('Network Error: ' + error.message);
+        console.error('Error:', error);
+      }
+    }
+
+    async function loadSurveys() {
+      try {
+        const response = await fetch('/api/questionnaires');
+        const result = await response.json();
+        surveys = result.questionnaires;
+        renderSurveys();
+      } catch (error) {
+        console.error('Error loading surveys:', error);
+      }
+    }
+
+    function renderSurveys() {
+      const container = document.getElementById('surveysContainer');
+      if (surveys.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No surveys created yet. Create one to get started!</p></div>';
+        return;
+      }
+
+      container.innerHTML = surveys.map(s => `
+        <div class="survey-card">
+          <div class="card-title">${s.title}</div>
+          <div class="card-desc">${s.description}</div>
+          <div class="card-meta">
+            <span>📝 ${s.questions.length} questions</span>
+            <span>${new Date(s.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div class="card-actions">
+            <button class="action-btn view" onclick="viewResults('${s._id}')">View Results</button>
+            <button class="action-btn share" onclick="shareLink('${s.link}')">Share</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function shareLink(link) {
+      document.getElementById('linkText').textContent = `${window.location.origin}/survey/${link}`;
+      document.getElementById('linkModal').classList.add('active');
+    }
+
+    function closeLinkModal() {
+      document.getElementById('linkModal').classList.remove('active');
+    }
+
+    function copyLink() {
+      const text = document.getElementById('linkText').textContent;
+      navigator.clipboard.writeText(text);
+      alert('✓ Link copied to clipboard!');
+    }
+
+    async function sendViaEmail() {
+      const email = document.getElementById('recipientEmail').value.trim();
+      const link = document.getElementById('linkText').textContent;
+
+      if (!email) {
+        alert('Please enter an email address');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/send-survey-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ surveyLink: link, recipientEmail: email })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('✓ Survey link sent to ' + email);
+          document.getElementById('recipientEmail').value = '';
+          closeLinkModal();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function viewResults(surveyId) {
+      try {
+        const response = await fetch(`/api/results/${surveyId}`);
+        const result = await response.json();
+        const survey = surveys.find(s => s._id === surveyId);
+
+        let resultsHtml = '<div class="form-section">';
+        resultsHtml += `<h2 style="margin-bottom: 20px;">${survey.title} - Results (${result.responses.length})</h2>`;
+
+        if (result.responses.length === 0) {
+          resultsHtml += '<div class="empty-state"><div class="empty-state-icon">📊</div><p>No responses yet</p></div>';
+        } else {
+          result.responses.forEach(resp => {
+            resultsHtml += `
+              <div style="border-bottom: 1px solid #e5e7eb; padding: 20px 0; margin: 20px 0;">
+                <div style="margin-bottom: 15px;">
+                  <strong>${resp.respondentName}</strong> (${resp.respondentEmail})
+                  <div style="font-size: 12px; color: #9ca3af; margin-top: 5px;">${new Date(resp.submittedAt).toLocaleString()}</div>
+                </div>
+            `;
+            resp.responses.forEach(r => {
+              resultsHtml += `
+                <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid #6d28d9;">
+                  <div style="font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 13px;">Q: ${r.questionText}</div>
+                  <div style="background: white; padding: 10px; border-radius: 4px; font-size: 13px; color: #4b5563; line-height: 1.5; margin-bottom: 8px;">
+                    <strong>Transcription:</strong> ${r.transcription}
+                  </div>
+                  <div style="background: #f0f4ff; padding: 10px; border-radius: 4px; font-size: 13px; color: #4b5563; line-height: 1.5; border-left: 2px solid #6366f1;">
+                    <strong>Normalized:</strong> ${r.normalized}
+                  </div>
+                </div>
+              `;
+            });
+            resultsHtml += '</div>';
+          });
+        }
+        resultsHtml += '</div>';
+
+        document.getElementById('resultsContainer').innerHTML = resultsHtml;
+        switchTab('results');
+      } catch (error) {
+        alert('Error loading results: fgffdg' + error.message);
+      }
+    }
+
+    function showSuccess(msg) {
+      const el = document.getElementById('successMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = '✗ ' + msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 5000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!-- ============================================
+     LANDING PAGE (views/index.ejs)
+     ============================================ -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Feedback System</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      min-height: 100vh;
+      color: #1f2937;
+    }
+
+    .navbar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 20px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: #4b5563;
+      font-weight: 600;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      color: #6d28d9;
+    }
+
+    .admin-btn {
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-block;
+    }
+
+    .admin-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
+    }
+
+    .hero {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 30px;
+      text-align: center;
+      color: white;
+    }
+
+    .hero-title {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+
+    .hero-subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      margin-top: 80px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      border-color: #6d28d9;
+      box-shadow: 0 12px 24px rgba(109, 40, 217, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 40px;
+      margin-bottom: 15px;
+    }
+
+    .feature-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.6;
+    }
+
+    .cta-section {
+      margin-top: 100px;
+      text-align: center;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+
+    .btn {
+      padding: 14px 32px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #6d28d9;
+      border: 2px solid #6d28d9;
+    }
+
+    .btn-secondary:hover {
+      background: #f3e8ff;
+    }
+
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 32px;
+      }
+
+      .hero {
+        padding: 40px 20px;
+      }
+
+      .nav-links {
+        gap: 10px;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="logo">🎤 AudioFeedback</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="/admin" class="admin-btn">Admin Panel</a>
+    </div>
+  </div>
+
+  <div class="hero">
+    <h1 class="hero-title">Capture Voice Feedback with Ease</h1>
+    <p class="hero-subtitle">
+      Beautiful audio questionnaire platform for collecting feedback through voice. 
+      Transcribed, analyzed, and organized in one place.
+    </p>
+
+    <div class="features" id="features">
+      <div class="feature-card">
+        <div class="feature-icon">🎙️</div>
+        <div class="feature-title">Voice Recording</div>
+        <div class="feature-desc">Easy one-click recording with real-time transcription</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">✨</div>
+        <div class="feature-title">Auto Transcription</div>
+        <div class="feature-desc">OpenAI Whisper converts speech to text automatically</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-title">AI Normalization</div>
+        <div class="feature-desc">GPT-4 cleans and normalizes transcriptions</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Analytics</div>
+        <div class="feature-desc">View all responses and feedback in beautiful dashboard</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📧</div>
+        <div class="feature-title">Easy Sharing</div>
+        <div class="feature-desc">Share survey links via email with one click</div>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <div class="feature-title">Modern Design</div>
+        <div class="feature-desc">Beautiful, responsive interface that works everywhere</div>
+      </div>
+    </div>
+
+    <div class="cta-section" id="how-it-works">
+      <h2 style="font-size: 32px; margin-bottom: 30px;">Get Started in 3 Steps</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; margin: 50px 0; text-align: left;">
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+          <div style="font-size: 24px; font-weight: 700; color: #a78bfa; margin-bottom: 10px;">1. Create</div>
+          <div style="opacity: 0.9;">Admin creates questions and survey</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+          <div style="font-size: 24px; font-weight: 700; color: #a78bfa; margin-bottom: 10px;">2. Share</div>
+          <div style="opacity: 0.9;">Send link via email to respondents</div>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 12px; backdrop-filter: blur(10px);">
+          <div style="font-size: 24px; font-weight: 700; color: #a78bfa; margin-bottom: 10px;">3. Analyze</div>
+          <div style="opacity: 0.9;">View transcribed & normalized results</div>
+        </div>
+      </div>
+
+      <div class="cta-buttons">
+        <a href="/admin" class="btn btn-primary">Go to Admin Panel →</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

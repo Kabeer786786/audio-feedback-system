@@ -1,5 +1,5 @@
 // ============================================
-// COMPLETE AUDIO FEEDBACK SYSTEM - FIXED
+// COMPLETE AUDIO FEEDBACK SYSTEM
 // ============================================
 
 // ============================================
@@ -14,6 +14,9 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const { OpenAI } = require('openai');
+
+// ⭐️ NEW: Import the OpenAI configuration
+const openaiConfig = require('./openaiConfig'); 
 
 dotenv.config();
 const app = express();
@@ -31,21 +34,19 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Stop your app (Ctrl+C)
-// 2. Delete the index from the Atlas UI
-// 3. Add this line to your code:
-
+// MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/feedback-system', {
-  autoIndex: false // <--- ADD THIS LINE
+  autoIndex: false // Disables auto-indexing on startup
 })
   .then(() => console.log('✅ MongoDB connected (AutoIndex disabled)'))
   .catch(err => console.log('❌ MongoDB error:', err));
 
-// 4. Start your app again. The index will not be recreated.
 
-// OpenAI Setup
+// ⭐️ UPDATED: OpenAI Setup using config file
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: openaiConfig.apiKey,
+  timeout: openaiConfig.timeout,
+  maxRetries: openaiConfig.maxRetries,
 });
 
 // Email Setup
@@ -67,9 +68,7 @@ const questionnaireSchema = new mongoose.Schema({
     required: true
   },
   description: String,
-  //
-  // THIS IS THE CORRECTED SCHEMA: An array of objects
-  //
+  // ⭐️ UPDATED: Added 'type' to the schema
   questions: [{
     order: Number,
     text: String,
@@ -99,7 +98,7 @@ const Questionnaire = mongoose.model('Questionnaire', questionnaireSchema);
 const Response = mongoose.model('Response', responseSchema);
 
 // ============================================
-// 3. ROUTES (Updated)
+// 3. ROUTES
 // ============================================
 
 // LANDING PAGE
@@ -109,15 +108,10 @@ app.get('/', (req, res) => {
 
 // ADMIN PAGE
 app.get('/admin', (req, res) => {
-  // 1. Get the 'adminUsername' from the URL query string
   const { adminUsername } = req.query;
-
-  // 2. Check if it matches your required username
   if (adminUsername === 'adminjohan') {
-    // 3. If it matches, render the admin page
     res.render('admin');
   } else {
-    // 4. If it does not match (or is not provided), redirect to the homepage
     res.redirect('/');
   }
 });
@@ -138,7 +132,6 @@ app.post('/api/create-questionnaire', async (req, res) => {
       .map((q, i) => ({
         order: i + 1,
         text: q.trim(),
-        type: 'audio'
       }));
 
     if (formattedQuestions.length === 0) {
@@ -156,7 +149,7 @@ app.post('/api/create-questionnaire', async (req, res) => {
     await questionnaire.save();
     const surveyUrl = `${process.env.APP_URL || 'http://localhost:3000'}/survey/${link}`;
     res.json({ success: true, link: surveyUrl, id: questionnaire._id });
-  } catch (error) {
+  } catch (error){
     console.error('Error creating questionnaire:', error);
     res.status(500).json({ success: false, error: error.message });
   }
@@ -200,9 +193,7 @@ app.get('/survey/:link', async (req, res) => {
   }
 });
 
-// ============================================
-// ⭐️ NEW ⭐️ API: Text-to-Speech
-// ============================================
+// API: Text-to-Speech
 app.post('/api/tts', async (req, res) => {
   try {
     const { text } = req.body;
@@ -210,17 +201,13 @@ app.post('/api/tts', async (req, res) => {
       return res.status(400).json({ error: 'No text provided' });
     }
 
-    // Generate audio speech
     const mp3 = await openai.audio.speech.create({
-      model: 'tts-1',
-      voice: 'alloy',
+      model: 'tts-1', // Config does not specify TTS model, so keeping 'tts-1'
+      voice: 'alloy', // Config does not specify TTS voice, so keeping 'alloy'
       input: text
     });
 
-    // Convert the audio to a buffer
     const buffer = Buffer.from(await mp3.arrayBuffer());
-
-    // Send the audio buffer as response
     res.set('Content-Type', 'audio/mpeg');
     res.send(buffer);
 
@@ -233,7 +220,6 @@ app.post('/api/tts', async (req, res) => {
 // API: Submit Response with Audio
 app.post('/api/submit-response', async (req, res) => {
   try {
-    // Note: respondentName is now just the email
     const { questionnaireId, respondentName, respondentEmail, responses } = req.body;
     const processedResponses = [];
 
@@ -244,27 +230,37 @@ app.post('/api/submit-response', async (req, res) => {
       fs.writeFileSync(audioPath, audioBuffer);
 
       try {
-        // Transcribe with OpenAI Whisper
+        // ⭐️ UPDATED: Transcribe with Whisper using config
         const transcription = await openai.audio.transcriptions.create({
           file: fs.createReadStream(audioPath),
-          model: 'whisper-1'
+          model: openaiConfig.whisper.model,
+          language: openaiConfig.whisper.language,
+          response_format: openaiConfig.whisper.responseFormat,
+          temperature: openaiConfig.whisper.temperature,
         });
 
-        // Normalize text with GPT
+        // ⭐️ UPDATED: Normalize text with GPT using config
         const normalizeResponse = await openai.chat.completions.create({
-          model: 'gpt-4-turbo',
-          messages: [{
-            role: 'user',
-            content: `Clean and normalize this transcription: "${transcription.text}". Return only the cleaned text.`
-          }],
-          max_tokens: 300
+          model: openaiConfig.gpt.model,
+          messages: [
+            {
+              role: 'system', // Use system prompt from config
+              content: openaiConfig.prompts.cleanTranscription
+            },
+            {
+              role: 'user',
+              content: transcription.text // The raw text from Whisper
+            }
+          ],
+          max_tokens: openaiConfig.gpt.maxTokens,
+          temperature: openaiConfig.gpt.temperature,
         });
 
         processedResponses.push({
           questionId: response.questionId,
           questionText: response.questionText,
-          transcription: transcription.text,
-          normalized: normalizeResponse.choices[0].message.content,
+          transcription: transcription.text, // The original, uncleaned transcription
+          normalized: normalizeResponse.choices[0].message.content, // The cleaned text
           timestamp: new Date()
         });
       } catch (aiError) {
@@ -310,45 +306,55 @@ app.get('/api/results/:questionnaireId', async (req, res) => {
   }
 });
 
-// ============================================
-// ⭐️ UPDATED ⭐️ API: Send Survey Link via Email
-// ============================================
+// API: Send Survey Link via Email (Bulk)
 app.post('/api/send-survey-link', async (req, res) => {
   try {
-    const { surveyLink, recipientEmail } = req.body;
-    
-    // Create the unique survey link with the email as a query parameter
-    const surveyLinkWithEmail = `${surveyLink}?email=${encodeURIComponent(recipientEmail)}`;
+    const { surveyLink, recipientEmails } = req.body;
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: recipientEmail,
-      subject: '🎤 Please Complete Our Audio Feedback Survey',
-      html: `
-        <div style="font-family: 'Segoe UI', Arial; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); padding: 30px; border-radius: 12px 12px 0 0; color: white; text-align: center;">
-            <h2 style="margin: 0;">Your Feedback Matters!</h2>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">We would love to hear your thoughts</p>
+    if (!Array.isArray(recipientEmails) || recipientEmails.length === 0) {
+      return res.status(400).json({ success: false, error: 'No recipient emails provided.' });
+    }
+
+    if (recipientEmails.length > 10) {
+      return res.status(400).json({ success: false, error: 'Cannot send to more than 10 emails at a time.' });
+    }
+
+    const emailPromises = recipientEmails.map(email => {
+      const surveyLinkWithEmail = `${surveyLink}?email=${encodeURIComponent(email)}`;
+
+      return transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: '🎤 Please Complete Our Audio Feedback Survey',
+        html: `
+          <div style="font-family: 'Segoe UI', Arial; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); padding: 30px; border-radius: 12px 12px 0 0; color: white; text-align: center;">
+              <h2 style="margin: 0;">Your Feedback Matters!</h2>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">We would love to hear your thoughts</p>
+            </div>
+            <div style="background: white; padding: 30px; text-align: center;">
+              <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                Please take a few minutes to complete our audio feedback survey. Your voice and opinions are valuable to us.
+              </p>
+              <a href="${surveyLinkWithEmail}" style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
+                Start Survey
+              </a>
+              <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">
+                Or copy this link: <br><code style="background: #f3f4f6; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 10px; word-break: break-all;">${surveyLinkWithEmail}</code>
+              </p>
+            </div>
           </div>
-          <div style="background: white; padding: 30px; text-align: center;">
-            <p style="color: #4b5563; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-              Please take a few minutes to complete our audio feedback survey. Your voice and opinions are valuable to us.
-            </p>
-            <a href="${surveyLinkWithEmail}" style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600;">
-              Start Survey
-            </a>
-            <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">
-              Or copy this link: <br><code style="background: #f3f4f6; padding: 8px; border-radius: 4px; display: inline-block; margin-top: 10px; word-break: break-all;">${surveyLinkWithEmail}</code>
-            </p>
-          </div>
-        </div>
-      `
+        `
+      });
     });
 
-    res.json({ success: true, message: 'Survey link sent successfully' });
+    await Promise.all(emailPromises);
+
+    res.json({ success: true, message: `Survey links sent successfully to ${recipientEmails.length} recipients.` });
+
   } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('Error sending bulk emails:', error);
+    res.status(500).json({ success: false, error: 'An error occurred while sending emails.' });
   }
 });
 

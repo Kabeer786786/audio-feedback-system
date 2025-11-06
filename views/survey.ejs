@@ -63,11 +63,49 @@
       width: 0%;
       transition: width 0.3s ease;
     }
+    
+    /* ⭐️ NEW: Start screen styles */
+    #startScreen {
+      padding: 60px 40px;
+      text-align: center;
+    }
+    
+    #startScreen h2 {
+      font-size: 24px;
+      color: #1f2937;
+      margin-bottom: 15px;
+    }
 
+    #startScreen p {
+      font-size: 16px;
+      color: #4b5563;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .start-btn {
+      width: 100%;
+      padding: 14px 24px;
+      background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .start-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
+    }
+    
+    /* ⭐️ UPDATED: Survey content hidden by default */
     .survey-content {
       padding: 40px 30px;
       min-height: 450px;
-      display: flex;
+      display: none; /* Changed: Will be shown by JS */
       flex-direction: column;
       justify-content: space-between;
     }
@@ -94,13 +132,47 @@
       letter-spacing: 0.5px;
       margin-bottom: 12px;
     }
+    
+    /* ⭐️ NEW: Question header to hold text and play button */
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
 
     .question-text {
       font-size: 22px;
       font-weight: 600;
       color: #1f2937;
-      margin-bottom: 30px;
       line-height: 1.5;
+      margin-bottom: 0; /* Removed margin-bottom */
+    }
+    
+    /* ⭐️ NEW: TTS Play Button */
+    .tts-play-btn {
+      background: #f3f4f6;
+      border: none;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      margin-left: 15px;
+    }
+    
+    .tts-play-btn:hover {
+      background: #e5e7eb;
+    }
+    
+    .tts-play-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: #6d28d9;
     }
 
     .audio-section {
@@ -225,8 +297,6 @@
       border-radius: 4px;
     }
 
-    /* Transcription box CSS is removed as the element is gone */
-
     .timer {
       font-size: 16px;
       color: #ef4444;
@@ -316,7 +386,6 @@
       box-shadow: 0 8px 16px rgba(109, 40, 217, 0.3);
     }
 
-    /* ⭐️ UPDATED Submit Section */
     .submit-section {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
       padding: 25px;
@@ -336,8 +405,6 @@
       font-size: 18px;
     }
     
-    /* Input fields are removed */
-
     .submit-btn {
       width: 100%;
       padding: 12px 24px;
@@ -365,6 +432,11 @@
       .survey-header h1 {
         font-size: 22px;
       }
+      
+      /* ⭐️ NEW: Responsive start screen */
+      #startScreen {
+        padding: 40px 20px;
+      }
 
       .question-text {
         font-size: 18px;
@@ -387,12 +459,18 @@
       </div>
     </div>
 
-    <div class="survey-content">
+    <div id="startScreen">
+      <h2>Welcome!</h2>
+      <p>This is an audio-only survey. For each question, the question will be read aloud, and your microphone will automatically turn on to record your response. Click "Stop Recording" to advance to the next question.</p>
+      <button class="start-btn" onclick="startSurvey()">Start Survey</button>
+    </div>
+
+    <div class="survey-content" id="surveyContent">
       <div>
         <div id="questionsContainer"></div>
       </div>
 
-      <div class="navigation" id="navigationButtons">
+      <div class="navigation" id="navigationButtons" style="display: none;">
         <button class="nav-btn" id="prevBtn" onclick="previousQuestion()" style="margin-right: auto;">← Previous</button>
         <button class="nav-btn next" id="nextBtn" onclick="nextQuestion()">Next →</button>
       </div>
@@ -412,14 +490,12 @@
     let recordingStartTime = 0;
     let timerInterval = null;
 
-    // ⭐️ NEW: Variables for email auto-fill and TTS
     let respondentEmail = '';
     let currentAudio = null;
     let audioCache = {};
 
     // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
-      // ⭐️ NEW: Get email from URL
       try {
         const urlParams = new URLSearchParams(window.location.search);
         respondentEmail = urlParams.get('email') || '';
@@ -435,11 +511,24 @@
 
       document.getElementById('surveyTitle').textContent = questionnaire.title;
       document.getElementById('surveyDesc').textContent = questionnaire.description;
-
-      renderQuestions();
-      showQuestion(0); // This will now also trigger the first TTS audio
-      updateProgress();
+      
+      // We wait for the user to click "Start"
+      // renderQuestions();
+      // showQuestion(0); // <-- This is removed from here
+      // updateProgress();
     });
+    
+    // ⭐️ NEW: Called by the "Start Survey" button
+    function startSurvey() {
+      // Hide start screen, show survey
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('surveyContent').style.display = 'flex';
+      
+      // Now we render and show the first question
+      renderQuestions();
+      updateProgress();
+      showQuestion(0); // This will now work, as it's after a user click
+    }
 
     function renderQuestions() {
       const container = document.getElementById('questionsContainer');
@@ -447,10 +536,18 @@
         const section = document.createElement('div');
         section.className = 'question-section';
         section.id = `question-${i}`;
-        // ⭐️ UPDATED: Removed the .transcription-box div
+        // ⭐️ UPDATED: Added question-header and tts-play-btn
         section.innerHTML = `
           <div class="question-counter">Question ${i + 1} of ${questionnaire.questions.length}</div>
-          <div class="question-text">${q.text}</div>
+          
+          <div class="question-header">
+            <div class="question-text">${q.text}</div>
+            <button class="tts-play-btn" id="playBtn-${i}" onclick="playQuestionAudio(${i})">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                <path d="M16.5 12C16.5 10.23 15.48 8.71 14 7.97V16.02C15.48 15.29 16.5 13.77 16.5 12ZM5 9V15H9L14 20V4L9 9H5Z"/>
+              </svg>
+            </button>
+          </div>
           
           <div class="audio-section" id="audioSection-${i}">
             <div class="recording-indicator" id="recordingInd-${i}">
@@ -461,7 +558,7 @@
             <div class="status-message" id="status-${i}"></div>
             <div class="timer" id="timer-${i}"></div>
 
-            <div class="button-group">
+            <div class="button-group" id="buttonGroup-${i}">
               <button class="control-button record-btn" id="record-${i}" onclick="startRecording(${i})">
                 🎤 Start Recording
               </button>
@@ -470,16 +567,15 @@
             <div class="playback-section" id="playback-${i}">
               <span class="playback-label">Your Recording</span>
               <audio id="audio-${i}" controls></audio>
-              </div>
+            </div>
           </div>
         `;
         container.appendChild(section);
       });
     }
 
-    // ⭐️ NEW: Function to play TTS audio for the current question
+    // ⭐️ UPDATED: Function to play TTS audio
     async function playQuestionAudio(index) {
-      // Stop any audio that is currently playing
       if (currentAudio) {
         currentAudio.pause();
         currentAudio = null;
@@ -488,79 +584,114 @@
       const question = questionnaire.questions[index];
       if (!question) return;
 
+      // Disable play button while fetching/playing
+      const playBtn = document.getElementById(`playBtn-${index}`);
+      if(playBtn) playBtn.disabled = true;
+
       try {
-        // Check if we have this audio cached
+        let audioToPlay;
         if (audioCache[index]) {
-          currentAudio = audioCache[index];
-          currentAudio.currentTime = 0; // Rewind
-          currentAudio.play();
+          audioToPlay = audioCache[index];
+          audioToPlay.currentTime = 0;
         } else {
-          // Fetch new audio from our TTS API
           const response = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: question.text })
           });
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch audio');
-          }
+          if (!response.ok) throw new Error('Failed to fetch audio');
 
           const blob = await response.blob();
           const audioUrl = URL.createObjectURL(blob);
-          currentAudio = new Audio(audioUrl);
-          
-          // Store in cache
-          audioCache[index] = currentAudio;
-          currentAudio.play();
+          audioToPlay = new Audio(audioUrl);
+          audioCache[index] = audioToPlay;
         }
+        
+        currentAudio = audioToPlay;
+        
+        // ⭐️ NEW: Auto-start recording when TTS finishes
+        currentAudio.onended = () => {
+          if (playBtn) playBtn.disabled = false; // Re-enable play button
+          
+          // Only auto-start if not already recording
+          const recordBtn = document.getElementById(`record-${currentQuestion}`);
+          if (recordBtn && !recordBtn.classList.contains('stop-btn')) {
+             startRecording(currentQuestion);
+          }
+        };
+        
+        // Re-enable button if playing errors
+        currentAudio.onerror = () => {
+           if (playBtn) playBtn.disabled = false;
+        }
+
+        await currentAudio.play();
+
       } catch (error) {
         console.error('Error playing TTS audio:', error);
+        if (playBtn) playBtn.disabled = false; // Re-enable on error
       }
     }
 
 
     function showQuestion(index) {
       document.querySelectorAll('.question-section').forEach(el => el.classList.remove('active'));
-      document.getElementById(`question-${index}`).classList.add('active');
-
+      
+      const questionEl = document.getElementById(`question-${index}`);
+      if (!questionEl) {
+        // This means we are past the last question, show submit
+        document.getElementById('submitSection').classList.add('show');
+        // Hide all other elements
+        document.getElementById('questionsContainer').style.display = 'none';
+        document.getElementById('navigationButtons').style.display = 'none';
+        return;
+      }
+      
+      questionEl.classList.add('active');
       currentQuestion = index;
       updateProgress();
 
-      // ⭐️ NEW: Play audio for the question
+      // Play audio for the question (this is the auto-play)
       playQuestionAudio(index);
 
-      document.getElementById('prevBtn').disabled = index === 0;
-      document.getElementById('nextBtn').style.display = index < questionnaire.questions.length - 1 ? 'block' : 'none';
-      
-      // ⭐️ UPDATED: Logic for showing submit section
+      // ⭐️ UPDATED: Simplified navigation logic
       const onLastQuestion = index === questionnaire.questions.length - 1;
       document.getElementById('submitSection').classList.toggle('show', onLastQuestion);
-      document.getElementById('navigationButtons').style.display = onLastQuestion ? 'none' : 'flex';
+      
+      // Hide nav buttons completely, we auto-advance
+      document.getElementById('navigationButtons').style.display = 'none';
     }
 
     function updateProgress() {
-      const progress = ((currentQuestion + 1) / questionnaire.questions.length) * 100;
+      // ⭐️ UPDATED: Progress is now based on questions *shown*
+      const progress = (currentQuestion / questionnaire.questions.length) * 100;
       document.getElementById('progressFill').style.width = progress + '%';
     }
 
     async function startRecording(questionIndex) {
-      // ⭐️ NEW: Stop TTS audio if it's playing
       if (currentAudio) {
         currentAudio.pause();
       }
 
+      // Hide the 'Start Recording' button, show the 'Stop Recording' button
+      const recordBtn = document.getElementById(`record-${questionIndex}`);
+      // ⭐️ UPDATED: Change button text and function
+      recordBtn.textContent = '⏹ Stop Recording';
+      recordBtn.className = 'control-button stop-btn'; // Make it the stop button
+
+      // We need to store the stream to stop it later
+      let stream;
+      
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
         
         const chunks = [];
         recordingStartTime = Date.now();
         let seconds = 0;
-
-        const recordBtn = document.getElementById(`record-${questionIndex}`);
-        recordBtn.textContent = '⏹ Stop Recording';
-        recordBtn.className = 'control-button stop-btn';
+        
+        // ⭐️ UPDATED: The button's onclick is now stopRecording
         recordBtn.onclick = () => stopRecording(questionIndex, chunks, stream);
 
         document.getElementById(`audioSection-${questionIndex}`).classList.add('recording');
@@ -582,6 +713,11 @@
       } catch (error) {
         showStatus(questionIndex, '❌ Microphone access denied', 'processing');
         console.error('Microphone error:', error);
+        
+        // Reset button on error
+        recordBtn.textContent = '🎤 Start Recording';
+        recordBtn.className = 'control-button record-btn';
+        recordBtn.onclick = () => startRecording(questionIndex);
       }
     }
 
@@ -601,12 +737,13 @@
       document.getElementById(`audio-${questionIndex}`).src = url;
       document.getElementById(`playback-${questionIndex}`).classList.add('show');
 
+      // ⭐️ UPDATED: Reset button to be "Re-record"
       const recordBtn = document.getElementById(`record-${questionIndex}`);
       recordBtn.textContent = '🎤 Re-record';
       recordBtn.className = 'control-button record-btn';
       recordBtn.onclick = () => startRecording(questionIndex);
 
-      showStatus(questionIndex, '✓ Recording saved! You can re-record if needed.', 'success');
+      showStatus(questionIndex, '✓ Recording saved!', 'success');
 
       const reader = new FileReader();
       reader.onload = () => {
@@ -616,6 +753,16 @@
           questionId: questionIndex,
           questionText: questionnaire.questions[questionIndex].text
         };
+        
+        // ⭐️ NEW: Auto-advance to next question
+        if (currentQuestion < questionnaire.questions.length - 1) {
+          nextQuestion();
+        } else {
+          // This was the last question, so just update progress
+          document.getElementById('progressFill').style.width = '100%';
+          // Show the submit section (it should already be visible, but double-check)
+          document.getElementById('submitSection').classList.add('show');
+        }
       };
       reader.readAsDataURL(audioBlob);
     }
@@ -638,16 +785,15 @@
     }
 
     function previousQuestion() {
+      // Note: Auto-advance makes "previous" tricky.
+      // This function is no longer called by any button,
+      // but we leave it in case you want to add it back.
       if (currentQuestion > 0) {
         showQuestion(currentQuestion - 1);
       }
     }
 
-    // ⭐️ UPDATED: Submit function
     async function submitResponse() {
-      // ⭐️ REMOVED: Name and email validation
-      
-      // Use the pre-filled email
       if (!respondentEmail) {
         alert('Error: No respondent email found. Please use the link from your email.');
         return;
@@ -666,7 +812,6 @@
         const response = await fetch('/api/submit-response', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // ⭐️ UPDATED: Send the pre-filled email for both fields
           body: JSON.stringify({
             questionnaireId: questionnaire._id,
             respondentName: respondentEmail, // Use email as name
@@ -677,7 +822,6 @@
 
         const result = await response.json();
         if (result.success) {
-          // ⭐️ NEW: Stop any playing audio before showing success
           if (currentAudio) {
             currentAudio.pause();
           }

@@ -4,6 +4,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -92,8 +93,13 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     .form-section {
@@ -400,6 +406,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="navbar">
     <h1>🎤 Admin Panel</h1>
@@ -420,7 +427,7 @@
         <div class="error-msg" id="errorMsg"></div>
 
         <h2 style="margin-bottom: 25px;">Create New Survey</h2>
-        
+
         <div class="form-group">
           <label>Survey Title</label>
           <input type="text" id="surveyTitle" placeholder="e.g., Customer Feedback Survey 2024">
@@ -432,7 +439,8 @@
         </div>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #374151;">Questions (at least 3)</label>
+          <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #374151;">Questions (at least
+            3)</label>
           <div class="questions-container" id="questionsContainer"></div>
           <button class="add-question-btn" onclick="addQuestion()">+ Add Question</button>
         </div>
@@ -457,17 +465,18 @@
     <div class="modal-content">
       <span class="close-modal" onclick="closeLinkModal()">&times;</span>
       <h3 style="margin-bottom: 20px;">Share Survey</h3>
-      
+
       <div class="link-display">
         <span class="link-text" id="linkText"></span>
         <button class="copy-btn" onclick="copyLink()">Copy</button>
       </div>
 
       <div class="form-group">
-        <label>Send via Email</label>
-        <input type="email" id="recipientEmail" placeholder="recipient@example.com">
-      </div>
-      <button class="submit-btn" onclick="sendViaEmail()" style="margin-top: 15px;">Send Email</button>
+                <label>Send via Email (up to 10, comma-separated)</label>
+                <textarea id="recipientEmails" placeholder="user1@example.com, user2@example.com, ..."
+          rows="4"></textarea>
+            </div>
+      <button class="submit-btn" onclick="sendViaEmail()" style="margin-top: 15px;">Send to All</button>
     </div>
   </div>
 
@@ -481,11 +490,11 @@
       loadSurveys();
     });
 
-   function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabName).classList.add('active');
-      
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+
       // --- FIXED ---
       // Find the button with the matching data-tab attribute and make it active
       const matchingButton = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
@@ -494,8 +503,8 @@
       }
       // --- END FIX ---
 
-      if (tabName === 'list') loadSurveys();
-    }
+      if (tabName === 'list') loadSurveys();
+    }
 
     function addQuestion() {
       const container = document.getElementById('questionsContainer');
@@ -522,7 +531,7 @@
     async function createSurvey() {
       const title = document.getElementById('surveyTitle').value.trim();
       const description = document.getElementById('surveyDesc').value.trim();
-      
+
       // Get questions as array of strings - ONLY strings
       const questionElements = Array.from(document.querySelectorAll('.question-input'));
       const questions = questionElements
@@ -545,14 +554,14 @@
         const payload = {
           title: title,
           description: description,
-          questions: questions  // Array of strings only
+          questions: questions // Array of strings only
         };
 
         console.log('Sending payload:', JSON.stringify(payload));
 
         const response = await fetch('/api/create-questionnaire', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
@@ -594,7 +603,8 @@
     function renderSurveys() {
       const container = document.getElementById('surveysContainer');
       if (surveys.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No surveys created yet. Create one to get started!</p></div>';
+        container.innerHTML =
+          '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No surveys created yet. Create one to get started!</p></div>';
         return;
       }
 
@@ -630,25 +640,42 @@
     }
 
     async function sendViaEmail() {
-      const email = document.getElementById('recipientEmail').value.trim();
+      const emailString = document.getElementById('recipientEmails').value;
       const link = document.getElementById('linkText').textContent;
 
-      if (!email) {
-        alert('Please enter an email address');
+      // 1. Split by comma, trim whitespace, and filter out empty/invalid emails
+      const emails = emailString.split(',')
+        .map(email => email.trim())
+        .filter(email => email.length > 0 && email.includes('@'));
+
+      if (emails.length === 0) {
+        alert('Please enter at least one valid email address.');
+        return;
+      }
+
+      // 2. Enforce the 10-email limit
+      if (emails.length > 10) {
+        alert('You can only send to a maximum of 10 emails at a time. You have entered ' + emails.length + '.');
         return;
       }
 
       try {
         const response = await fetch('/api/send-survey-link', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ surveyLink: link, recipientEmail: email })
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          // 3. Send the 'recipientEmails' as an array
+          body: JSON.stringify({
+            surveyLink: link,
+            recipientEmails: emails
+          })
         });
 
         const result = await response.json();
         if (result.success) {
-          alert('✓ Survey link sent to ' + email);
-          document.getElementById('recipientEmail').value = '';
+          alert(`✓ Survey link sent to ${emails.length} recipients!`);
+          document.getElementById('recipientEmails').value = ''; // Clear the textarea
           closeLinkModal();
         } else {
           alert('Error: ' + result.error);
@@ -668,7 +695,8 @@
         resultsHtml += `<h2 style="margin-bottom: 20px;">${survey.title} - Results (${result.responses.length})</h2>`;
 
         if (result.responses.length === 0) {
-          resultsHtml += '<div class="empty-state"><div class="empty-state-icon">📊</div><p>No responses yet</p></div>';
+          resultsHtml +=
+            '<div class="empty-state"><div class="empty-state-icon">📊</div><p>No responses yet</p></div>';
         } else {
           result.responses.forEach(resp => {
             resultsHtml += `
@@ -718,4 +746,5 @@
     }
   </script>
 </body>
+
 </html>
